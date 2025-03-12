@@ -1,3 +1,11 @@
+def decimal_to_binary(num, length):
+    """Ручное преобразование числа в двоичную строку с ведущими нулями"""
+    binary = ''
+    for _ in range(length):
+        binary = str(num % 2) + binary
+        num = num // 2
+    return binary
+
 def parse_expression(expr):
     """Парсинг логического выражения и извлечение переменных"""
     variables = sorted(set([c for c in expr if c in 'abcde']))
@@ -102,7 +110,7 @@ def build_forms(table, variables):
         'sknf': ' ∧ '.join(sknf),
         'numeric_sdnf': ', '.join(numeric_sdnf),
         'numeric_sknf': ', '.join(numeric_sknf),
-        'index': f"{index} ({bin(index)[2:].zfill(len(table))})"
+        'index': f"{index} ({decimal_to_binary(index, len(table))})"
     }
 
 
