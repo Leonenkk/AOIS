@@ -9,8 +9,11 @@ def decimal_to_binary(num, length):
 def parse_expression(expr):
     """Парсинг логического выражения и извлечение переменных"""
     variables = sorted(set([c for c in expr if c in 'abcde']))
-    expr = expr.replace(' ', '').replace('∨', '|').replace('∧', '&')
-    expr = expr.replace('→', '>').replace('∼', '=').replace('¬', '!')
+    expr = expr.replace(' ', '')
+    expr = expr.replace('∨', '|').replace('∧', '&')
+    expr = expr.replace('->', '>').replace('→', '>')
+    expr = expr.replace('~', '=').replace('∼', '=')
+    expr = expr.replace('¬', '!')
     return variables, expr
 
 
@@ -142,3 +145,12 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#тестовые примеры для ввода
+# ((a->b)&(b->c))->(a->c)
+# ((a∨b)&(c->d))∼e
+#a->(b->c)
+#(a∨b)∧!c
+
+
