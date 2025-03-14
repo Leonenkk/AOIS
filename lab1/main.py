@@ -14,7 +14,11 @@ def decimal_to_binary(n, bit_length=None):
 
 def binary_to_decimal(binary_str):
     """Перевод двоичной строки (представляющей неотрицательное число) в десятичное"""
-    return int(binary_str, 2)
+    decimal = 0
+    for i, bit in enumerate(reversed(binary_str)):
+        decimal += int(bit) * (2 ** i)
+    return decimal
+    #return int(binary_str, 2)
 
 
 def twos_complement_to_decimal(binary_str):
@@ -95,82 +99,176 @@ def subtract_in_additional_code(a, b, bit_length):
     return add_in_additional_code(a, -b, bit_length)
 
 
-def multiply_in_direct_code(a, b, bit_length):
-    """Умножение в прямом (знаковом) коде.
-       Числа вводятся в десятичном формате, результат выводится как строка прямого кода.
-       Если число отрицательное, знак кодируется установкой старшего бита в 1."""
-    product = a * b
-    if product >= 0:
-        return get_positive_code(product, bit_length)
+def binary_add(a, b):
+    """
+    Сложение двух двоичных чисел, заданных в виде строк (без знака).
+    Возвращает строку с результатом.
+    """
+    max_len = max(len(a), len(b))
+    a = a.zfill(max_len)
+    b = b.zfill(max_len)
+    carry = 0
+    result = ""
+    for i in range(max_len - 1, -1, -1):
+        sum_bit = (1 if a[i] == '1' else 0) + (1 if b[i] == '1' else 0) + carry
+        result = ('1' if sum_bit % 2 == 1 else '0') + result
+        carry = 1 if sum_bit >= 2 else 0
+    if carry:
+        result = '1' + result
+    return result
+
+
+def binary_subtract(a, b):
+    """
+    Вычитание b из a (a >= b) для двоичных чисел в виде строк (без знака).
+    Возвращает результат в виде строки.
+    """
+    max_len = max(len(a), len(b))
+    a = a.zfill(max_len)
+    b = b.zfill(max_len)
+    result = ""
+    borrow = 0
+    for i in range(max_len - 1, -1, -1):
+        diff = (1 if a[i] == '1' else 0) - (1 if b[i] == '1' else 0) - borrow
+        if diff < 0:
+            diff += 2
+            borrow = 1
+        else:
+            borrow = 0
+        result = ('1' if diff == 1 else '0') + result
+    result = result.lstrip('0')
+    return result if result != "" else "0"
+
+
+def binary_compare(a, b):
+    """
+    Сравнение двух двоичных чисел (без знака), заданных строками.
+    Возвращает 1, если a > b, 0 если равны, -1 если a < b.
+    """
+    a = a.lstrip('0')
+    b = b.lstrip('0')
+    if len(a) > len(b):
+        return 1
+    elif len(a) < len(b):
+        return -1
     else:
-        return get_negative_code(product, bit_length)
+        if a > b:
+            return 1
+        elif a < b:
+            return -1
+        else:
+            return 0
+
+
+def multiply_in_direct_code(a, b, bit_length):
+    """
+    Умножение двух чисел в прямом (знаковом) коде.
+    """
+    sign_a = '0' if a >= 0 else '1'
+    sign_b = '0' if b >= 0 else '1'
+    mag_a = decimal_to_binary(abs(a), bit_length - 1)
+    mag_b = decimal_to_binary(abs(b), bit_length - 1)
+
+    product = "0"
+    for i in range(len(mag_b) - 1, -1, -1):
+        if mag_b[i] == '1':
+            partial = mag_a + "0" * (len(mag_b) - 1 - i)
+            product = binary_add(product, partial)
+    if len(product) > bit_length - 1:
+        product = product[-(bit_length - 1):]
+    else:
+        product = product.zfill(bit_length - 1)
+
+    result_sign = '0' if sign_a == sign_b else '1'
+    return result_sign + product
 
 
 def divide_in_direct_code(a, b, precision=5, int_bit_length=8):
-    """Деление в прямом (знаковом) коде с точностью до precision двоичных разрядов дробной части.
-       Для целой части используется int_bit_length (включая бит знака).
-       Возвращает кортеж: (результат в двоичном виде, десятичное значение результата)."""
+    """деление в прямом коде"""
     if b == 0:
         return "Ошибка: деление на ноль", None
-    sign = 1
-    if a < 0:
-        sign = -1
-        a = abs(a)
-    if b < 0:
-        sign *= -1
-        b = abs(b)
-    quotient = a // b
-    remainder = a % b
-    quotient_bin = decimal_to_binary(quotient, int_bit_length - 1)
-    if sign < 0:
-        direct_quotient = '1' + quotient_bin
-    else:
-        direct_quotient = '0' + quotient_bin
-    fractional_bits = ""
+
+    result_sign = '0' if (a >= 0 and b > 0) or (a < 0 and b < 0) else '1'
+    dividend = decimal_to_binary(abs(a))
+    divisor = decimal_to_binary(abs(b))
+
+    quotient = ""
+    temp = ""
+    for bit in dividend:
+        temp += bit
+        temp = temp.lstrip('0')
+        if temp == "":
+            temp = "0"
+        if binary_compare(temp, divisor) >= 0:
+            quotient += "1"
+            temp = binary_subtract(temp, divisor)
+        else:
+            quotient += "0"
+    quotient = quotient.lstrip('0')
+    if quotient == "":
+        quotient = "0"
+    remainder = temp
+
+    fractional = ""
     for _ in range(precision):
-        remainder *= 2
-        digit = remainder // b
-        fractional_bits += str(digit)
-        remainder %= b
-    result_bin = direct_quotient + "." + fractional_bits
-    frac_val = sum(int(bit) * (2 ** -(i + 1)) for i, bit in enumerate(fractional_bits))
-    result_dec = sign * (quotient + frac_val)
-    return result_bin, result_dec
+        remainder = remainder + "0"
+        remainder = remainder.lstrip('0')
+        if remainder == "":
+            remainder = "0"
+        if binary_compare(remainder, divisor) >= 0:
+            fractional += "1"
+            remainder = binary_subtract(remainder, divisor)
+        else:
+            fractional += "0"
+
+    int_part = quotient.zfill(int_bit_length - 1)
+    direct_int = result_sign + int_part
+    final_result = direct_int + "." + fractional
+
+    dec_int = binary_to_decimal(quotient) if quotient != "" else 0
+    frac_val = 0
+    for i, bit in enumerate(fractional):
+        if bit == "1":
+            frac_val += 1 / (2 ** (i + 1))
+    dec_result = dec_int + frac_val
+    if result_sign == '1':
+        dec_result = -dec_result
+    return final_result, dec_result
 
 
 def convert_float_to_ieee754(num):
     """
-    Преобразование положительного десятичного числа с плавающей точкой (num)
-    в 32-битовое представление IEEE-754 по стандарту.
-    Реализация полностью «с нуля»: разделение на целую и дробную части,
-    перевод каждой части в двоичный вид, нормализация, вычисление экспоненты и формирование мантиссы.
+    Преобразует десятичное число с плавающей точкой в 32-битовое представление IEEE-754.
+    Для отрицательных чисел вычисляется представление для abs(num), а затем меняется знак
+    (первый бит становится '1').
     """
+    sign_bit = "0"
+    if num < 0:
+        sign_bit = "1"
+        num = -num
     int_part = int(num)
-    frac_part = num - int(num)
+    frac_part = num - int_part
     bin_int = ""
     if int_part == 0:
         bin_int = "0"
     else:
         temp = int_part
         while temp > 0:
-            rem = temp % 2
-            bin_int = str(rem) + bin_int
-            temp = temp // 2
+            bin_int = str(temp % 2) + bin_int
+            temp //= 2
     bin_frac = ""
     temp_frac = frac_part
     for _ in range(30):
-        temp_frac = temp_frac * 2
+        temp_frac *= 2
         if temp_frac >= 1:
             bin_frac += "1"
-            temp_frac = temp_frac - 1
+            temp_frac -= 1
         else:
             bin_frac += "0"
-    # Если целая часть не равна нулю: число представляется как 1.xxx * 2^(len(bin_int)-1)
     if bin_int != "0":
         exponent = len(bin_int) - 1
         mantissa = (bin_int[1:] + bin_frac)[:23]
-        if len(mantissa) < 23:
-            mantissa = mantissa + "0" * (23 - len(mantissa))
+        mantissa = mantissa.ljust(23, "0")
     else:
         index = 0
         while index < len(bin_frac) and bin_frac[index] == "0":
@@ -181,24 +279,22 @@ def convert_float_to_ieee754(num):
         else:
             exponent = -(index + 1)
             mantissa = bin_frac[index + 1:index + 1 + 23]
-            if len(mantissa) < 23:
-                mantissa = mantissa + "0" * (23 - len(mantissa))
+            mantissa = mantissa.ljust(23, "0")
     exp_val = exponent + 127
     exp_bits = ""
     temp_exp = exp_val
-    for i in range(8):
-        bit = temp_exp % 2
-        exp_bits = str(bit) + exp_bits
-        temp_exp = temp_exp // 2
-    ieee = "0" + exp_bits + mantissa
+    for _ in range(8):
+        exp_bits = str(temp_exp % 2) + exp_bits
+        temp_exp //= 2
+
+    ieee = sign_bit + exp_bits + mantissa
     return ieee
 
 
 def ieee754_to_decimal(ieee):
     """
-    Преобразование 32-битового представления IEEE-754 (строка)
-    в десятичное число. Реализовано вручную: извлечение экспоненты и мантиссы,
-    восстановление неявной единицы, вычисление значения.
+    Преобразует 32-битовое представление IEEE-754 (строка) в десятичное число.
+    Извлекается знак, экспонента и мантисса, затем вычисляется итоговое значение.
     """
     sign = 1 if ieee[0] == "0" else -1
     exponent = 0
@@ -216,41 +312,61 @@ def ieee754_to_decimal(ieee):
 
 
 def add_ieee754(bin1, bin2):
+    """
+    Складывает два числа, представленных в формате IEEE-754 (32 бита), с корректной обработкой знака.
+    """
+    sign1 = 0 if bin1[0] == '0' else 1
+    sign2 = 0 if bin2[0] == '0' else 1
+
     exp1 = 0
     for bit in bin1[1:9]:
         exp1 = exp1 * 2 + (1 if bit == "1" else 0)
     exp2 = 0
     for bit in bin2[1:9]:
         exp2 = exp2 * 2 + (1 if bit == "1" else 0)
-    mant1 = 0
-    for bit in ("1" + bin1[9:]):
-        mant1 = mant1 * 2 + (1 if bit == "1" else 0)
-    mant2 = 0
-    for bit in ("1" + bin2[9:]):
-        mant2 = mant2 * 2 + (1 if bit == "1" else 0)
+
+    mant1 = (1 << 23) + int(bin1[9:], 2)
+    mant2 = (1 << 23) + int(bin2[9:], 2)
+    exp = exp1
     if exp1 > exp2:
-        diff = exp1 - exp2
-        mant2 = mant2 >> diff
-        exp = exp1
-    else:
-        diff = exp2 - exp1
-        mant1 = mant1 >> diff
+        shift = exp1 - exp2
+        mant2 >>= shift
+    elif exp2 > exp1:
+        shift = exp2 - exp1
+        mant1 >>= shift
         exp = exp2
-    sum_mant = mant1 + mant2
-    if sum_mant >= (1 << 24):
-        sum_mant = sum_mant >> 1
+
+    if sign1 == sign2:
+        result_mant = mant1 + mant2
+        result_sign = sign1
+    else:
+        if mant1 >= mant2:
+            result_mant = mant1 - mant2
+            result_sign = sign1
+        else:
+            result_mant = mant2 - mant1
+            result_sign = sign2
+    if result_mant == 0:
+        return "0" * 32
+    while result_mant >= (1 << 24):
+        result_mant >>= 1
         exp += 1
-    frac = sum_mant - (1 << 23)
-    frac_str = ""
+    while result_mant < (1 << 23):
+        result_mant <<= 1
+        exp -= 1
+    frac = result_mant - (1 << 23)
+    exp_bits = ""
+    temp_exp = exp
+    for _ in range(8):
+        exp_bits = ("1" if (temp_exp % 2) == 1 else "0") + exp_bits
+        temp_exp //= 2
+    frac_bits = ""
     for i in range(23):
         bit = (frac >> (22 - i)) & 1
-        frac_str += "1" if bit == 1 else "0"
-    exp_str = ""
-    temp = exp
-    for i in range(8):
-        exp_str = ("1" if (temp % 2) == 1 else "0") + exp_str
-        temp = temp // 2
-    return "0" + exp_str + frac_str
+        frac_bits += "1" if bit == 1 else "0"
+
+    result_ieee = ("0" if result_sign == 0 else "1") + exp_bits + frac_bits
+    return result_ieee
 
 
 def main():
@@ -277,13 +393,19 @@ def main():
 
     # Вывод представлений для первого числа
     print("\nПредставления первого числа:")
-    print(f"Прямой код: {get_negative_code(num1, bit_length)}")
+    if num1 > 0:
+        print(f"Прямой код: {get_positive_code(num1, bit_length)}")
+    else:
+        print(f"Прямой код: {get_negative_code(num1, bit_length)}")
     print(f"Обратный код: {get_reverse_code(num1, bit_length)}")
     print(f"Дополнительный код: {get_additional_code(num1, bit_length)}")
 
     # Вывод представлений для второго числа
     print("\nПредставления второго числа:")
-    print(f"Прямой код: {get_positive_code(num2, bit_length)}")
+    if num2 > 0:
+        print(f"Прямой код: {get_positive_code(num2, bit_length)}")
+    else:
+        print(f"Прямой код: {get_negative_code(num2, bit_length)}")
     print(f"Обратный код: {get_reverse_code(num2, bit_length)}")
     print(f"Дополнительный код: {get_additional_code(num2, bit_length)}")
 
@@ -303,7 +425,8 @@ def main():
     print(f"Десятичный результат: {twos_complement_to_decimal(sub_result)}")
 
     print("\nТестирование умножения в прямом коде:")
-    mul_code = multiply_in_direct_code(num1,num2, 8)
+    mul_code = multiply_in_direct_code(num1, num2, 8)
+
     def direct_code_to_decimal(direct_str):
         bit_length = len(direct_str)
         if direct_str[0] == '0':
@@ -314,7 +437,6 @@ def main():
     print(f"Умножение {num1} и {num2}:")
     print(f"Результат (bin): {mul_code}")
     print(f"Результат (dec): {direct_code_to_decimal(mul_code)}")
-
 
     if num2 == 0:
         print("\nДеление на ноль невозможно!")
@@ -346,6 +468,7 @@ def main():
     dec_result = ieee754_to_decimal(ieee_result)
     print("\nРезультат сложения (десятичное значение):")
     print(dec_result)
+
 
 if __name__ == "__main__":
     main()
