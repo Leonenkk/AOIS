@@ -1,5 +1,5 @@
 import unittest
-from main import *
+from run import *
 
 class TestBinaryArithmetic(unittest.TestCase):
     def test_decimal_to_binary(self):
