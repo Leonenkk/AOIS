@@ -48,21 +48,30 @@ def convert_to_tree(rpn_elements):
     }
 
     for element in rpn_elements:
-        if element.isalpha():
+        if element.isalpha():  # если это переменная
             node_stack.append(ExpressionNode('variable', variable=element))
 
         elif element == '!':
-            operand = node_stack.pop()
-            node_stack.append(ExpressionNode('negation', lhs=operand))
+            if node_stack:  # проверка на наличие операнда
+                operand = node_stack.pop()
+                node_stack.append(ExpressionNode('negation', lhs=operand))
+            else:
+                raise ValueError("Not enough operands for negation")
 
         elif element in operation_map:
-            rhs = node_stack.pop()
-            lhs = node_stack.pop()
-            node_stack.append(ExpressionNode(
-                operation_map[element],
-                lhs=lhs,
-                rhs=rhs
-            ))
+            if len(node_stack) >= 2:  # проверка на наличие двух операндов
+                rhs = node_stack.pop()
+                lhs = node_stack.pop()
+                node_stack.append(ExpressionNode(
+                    operation_map[element],
+                    lhs=lhs,
+                    rhs=rhs
+                ))
+            else:
+                raise ValueError(f"Not enough operands for operation '{element}'")
+
+    if len(node_stack) != 1:
+        raise ValueError("Invalid RPN expression; stack should contain one element at the end.")
 
     return node_stack[0]
 
