@@ -23,6 +23,8 @@ if __name__ == "__main__":
     print("Исходная таблица:")
     ht.print_table()
 
+    print(f"\nКоэффициент заполнения: {ht.load_factor()}")
+
     ht.delete("Волейбол")
     print("\nПосле удаления Волейбола:")
     ht.print_table()
@@ -30,3 +32,5 @@ if __name__ == "__main__":
     ht.update("Футбол", "Международный футбол: 11 игроков, мяч, ворота")
     print("\nПосле обновления Футбола:")
     ht.print_table()
+
+    print(f"\nКоэффициент заполнения: {ht.load_factor()}")

@@ -173,8 +173,14 @@ class SportsHashTable:
             else:
                 data = self.external_data.get(entry.Pi, entry.Pi) if entry.L == 1 else entry.Pi
                 entry_id = entry.ID or ""
+            h_value = entry.h if entry.h is not None else ""
             print(
-                f"{idx:<6} | {entry_id:<15} | {entry.V or '':<4} | {entry.h or '':<2} | "
+                f"{idx:<6} | {entry_id:<15} | {entry.V or '':<4} | {h_value:<2} | "
                 f"{entry.C:<1} | {entry.U:<1} | {entry.T:<1} | {entry.L:<1} | {entry.D:<1} | "
                 f"{entry.P0 or '':<3} | {str(data)[:30]:<30}"
             )
+
+    def load_factor(self):
+        """Коэффициент заполнения таблицы"""
+        used = sum(1 for entry in self.table if entry.U == 1)
+        return round(used / self.size, 2)
