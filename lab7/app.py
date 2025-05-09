@@ -53,21 +53,10 @@ print(" 3) Арифметическая операция Aj + Bj дляV = 111:"
 dm.add_aj_bj([1, 1, 1])
 print("После обновления полей S:")
 dm.print_matrix()
+print("Поле S после обновления:", dm.read_word(0)[-5:])  # [0,1,1,1,1]
 
 # 4) Поиск ближайшего слова
-print(" 4) Поиск ближайшего слова, совпадающего со словом №0: ")
-idx_top = dm.find_nearest(0, direction="top")
-idx_bottom = dm.find_nearest(0, direction="bottom")
-print(f"   Ближайший сверху (top) : столбец {idx_top}")
-print(f"   Ближайший снизу (bottom): столбец {idx_bottom}")
-
-# 5) Демонстрация работы поиска
-print("5) Тест поиска для слова №2: ")
-dm.write_word(5, w2)
-dm.write_word(14, w2)
-print("Скопировали слово №2 в столбцы 5 и 14.")
-dm.print_matrix()
-idx_top_2 = dm.find_nearest(2, direction="top")
-idx_bottom_2 = dm.find_nearest(2, direction="bottom")
-print(f"   Top от 2:    столбец {idx_top_2} (ожидаем 14)")
-print(f"   Bottom от 2: столбец {idx_bottom_2} (ожидаем 5)")
+dm.write_word(5, dm.read_word(2))
+dm.write_word(14, dm.read_word(2))
+print("Ближайший сверху:", dm.find_nearest(2, "top"))   # 5
+print("Ближайший снизу:", dm.find_nearest(2, "bottom")) # 14
