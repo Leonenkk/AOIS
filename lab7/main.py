@@ -31,52 +31,36 @@ class DiagonalMatrix:
             return [1 - a for a in word1]
         raise ValueError(f"Unknown function {func}")
 
-    def int_to_bits(self, num, bits=16):
-        return list(map(int, f"{num:0{bits}b}"))[-bits:]
+    def find_nearest(self, reference_index, direction="top"):
+        target_word = self.read_word(reference_index)
+        nearest_index = -1
+        min_distance = float('inf')
 
-    def compute_gl(self, A_word):
-        g = [0] * self.size
-        l = [0] * self.size
+        # Проверяем все столбцы, кроме reference_index
         for j in range(self.size):
-            S_word = self.read_word(j)
-            g_current = 0
-            l_current = 0
-            for i in reversed(range(16)):  # Сравнение с старшего бита (i=15)
-                a_i = A_word[i]
-                s_i = S_word[i]
-                g_prev = g_current
-                l_prev = l_current
-                g_current = g_prev | (a_i & ~s_i & ~l_prev)
-                l_current = l_prev | (~a_i & s_i & ~g_prev)
-            g[j] = g_current
-            l[j] = l_current
-        return g, l
+            if j == reference_index:
+                continue
+            if self.read_word(j) == target_word:
+                # Вычисляем "циклическое" расстояние между индексами
+                distance = (j - reference_index) % self.size
 
-    def find_nearest(self, A_value, direction="top"):
-        A_word = self.int_to_bits(A_value)
-        g, l = self.compute_gl(A_word)
+                if direction == "top":
+                    # Для "top" ищем минимальное расстояние влево (j < reference_index)
+                    if distance > (self.size // 2):
+                        continue  # Пропускаем индексы справа
+                    if distance < min_distance:
+                        min_distance = distance
+                        nearest_index = j
+                elif direction == "bottom":
+                    # Для "bottom" ищем минимальное расстояние вправо (j > reference_index)
+                    if distance <= (self.size // 2):
+                        continue
+                    adjusted_distance = self.size - distance
+                    if adjusted_distance < min_distance:
+                        min_distance = adjusted_distance
+                        nearest_index = j
 
-        candidates = []
-        for j in range(self.size):
-            S_value = self._word_to_int(self.read_word(j))
-            if direction == "top" and l[j] and not g[j]:
-                candidates.append((j, S_value))
-            elif direction == "bottom" and g[j] and not l[j]:
-                candidates.append((j, S_value))
-
-        if not candidates:
-            return -1
-
-        if direction == "top":
-            nearest = max(candidates, key=lambda x: x[1])
-        else:
-            nearest = min(candidates, key=lambda x: x[1])
-
-        return nearest[0]
-
-    def _word_to_int(self, word):
-        return int(''.join(map(str, word)), 2)
-
+        return nearest_index
 
     def add_aj_bj(self, V):
         for j in range(self.size):

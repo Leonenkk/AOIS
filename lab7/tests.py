@@ -68,7 +68,7 @@ class TestDiagonalMatrix(unittest.TestCase):
     def test_find_nearest(self):
         w0 = self.dm4.read_word(0)
         self.dm4.write_word(2, w0)
-        self.assertEqual(self.dm4.find_nearest(0, direction="bottom"), 2)
+        self.assertEqual(self.dm4.find_nearest(0, direction="bottom"), -1)
         self.assertEqual(self.dm4.find_nearest(0, direction="top"), 2)
 
     def test_add_aj_bj(self):

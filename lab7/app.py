@@ -56,13 +56,7 @@ dm.print_matrix()
 print("Поле S после обновления:", dm.read_word(0)[-5:])  # [0,1,1,1,1]
 
 # 4) Поиск ближайшего слова
-A_value = 14416
-
-# Поиск ближайшего сверху (максимальное значение < A)
-nearest_top = dm.find_nearest(A_value, direction="top")
-
-# Поиск ближайшего снизу (минимальное значение > A)
-nearest_bottom = dm.find_nearest(A_value, direction="bottom")
-
-print(f"Ближайший сверху: {nearest_top}")
-print(f"Ближайший снизу: {nearest_bottom}")
+dm.write_word(5, dm.read_word(2))
+dm.write_word(14, dm.read_word(2))
+print("Ближайший сверху:", dm.find_nearest(2, "top"))   # 5
+print("Ближайший снизу:", dm.find_nearest(2, "bottom")) # 14
