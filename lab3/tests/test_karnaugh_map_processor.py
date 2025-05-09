@@ -91,5 +91,3 @@ class TestDisplayKmapTable(unittest.TestCase):
         self.assertIn('1', output)
         self.assertIn('0', output)
 
-if __name__ == '__main__':
-    unittest.main()

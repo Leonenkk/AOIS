@@ -10,6 +10,19 @@ from .logic_minimization_engine import (
 
 
 def compute_prime_implicants(input_terms, var_count, var_names, is_dnf=True):
+    """Вычисляет простые импликанты для заданных термов"""
+    # Валидация входных параметров
+    if not isinstance(input_terms, (list, set)):
+        raise TypeError("Input terms must be a list or set")
+    if not isinstance(var_count, int) or var_count <= 0:
+        raise ValueError("Variable count must be a positive integer")
+    if not isinstance(var_names, list) or len(var_names) != var_count:
+        raise ValueError("Variable names must be a list matching variable count")
+    if any(not isinstance(term, int) or term < 0 for term in input_terms):
+        raise ValueError("All terms must be non-negative integers")
+    if any(term >= (1 << var_count) for term in input_terms):
+        raise ValueError("Some terms exceed maximum value for given variable count")
+
     term_groups = {}
     for term in input_terms:
         bit_str = convert_number_to_bits(term, var_count)
@@ -33,8 +46,9 @@ def compute_prime_implicants(input_terms, var_count, var_names, is_dnf=True):
             for t1 in term_groups[sorted_keys[i]]:
                 for t2 in term_groups[sorted_keys[i + 1]]:
                     merged = merge_implicants(t1, t2)
-                    new_groups.setdefault(merged.count('1'), set()).add(merged) if merged else None
-                    processed_terms.update({t1, t2}) if merged else None
+                    if merged:
+                        new_groups.setdefault(merged.count('1'), set()).add(merged)
+                        processed_terms.update({t1, t2})
 
         final_implicants.extend(t for k in term_groups for t in term_groups[k] if t not in processed_terms)
 
@@ -55,6 +69,16 @@ def compute_prime_implicants(input_terms, var_count, var_names, is_dnf=True):
 
 
 def identify_essential_implicants(prime_set, terms, var_count, var_names, is_dnf=True):
+    """Идентифицирует существенные импликанты"""
+    if not isinstance(prime_set, (list, set)):
+        raise TypeError("Prime set must be a list or set")
+    if not isinstance(terms, (list, set)):
+        raise TypeError("Terms must be a list or set")
+    if not isinstance(var_count, int) or var_count <= 0:
+        raise ValueError("Variable count must be a positive integer")
+    if not isinstance(var_names, list) or len(var_names) != var_count:
+        raise ValueError("Variable names must be a list matching variable count")
+
     return prime_set if is_dnf else [
         imp for imp in prime_set if not any(
             extract_literals_from_pattern(imp, var_names, is_dnf).issubset(
@@ -65,6 +89,12 @@ def identify_essential_implicants(prime_set, terms, var_count, var_names, is_dnf
 
 
 def optimize_dnf(minterms, var_count, var_names):
+    """Оптимизирует ДНФ выражение"""
+    if not isinstance(minterms, (list, set)):
+        raise TypeError("Minterms must be a list or set")
+    if not minterms:
+        raise ValueError("Minterms list cannot be empty")
+
     print("\n==== Минимизация СДНФ (расчётный метод) ====")
     prime_set = compute_prime_implicants(minterms, var_count, var_names, True)
     essential_set = identify_essential_implicants(prime_set, minterms, var_count, var_names, True)
@@ -77,6 +107,12 @@ def optimize_dnf(minterms, var_count, var_names):
 
 
 def optimize_cnf(maxterms, var_count, var_names):
+    """Оптимизирует КНФ выражение"""
+    if not isinstance(maxterms, (list, set)):
+        raise TypeError("Maxterms must be a list or set")
+    if not maxterms:
+        raise ValueError("Maxterms list cannot be empty")
+
     print("\n==== Минимизация СКНФ (расчётный метод) ====")
     prime_set = compute_prime_implicants(maxterms, var_count, var_names, False)
     essential_set = identify_essential_implicants(prime_set, maxterms, var_count, var_names, False)
@@ -89,6 +125,16 @@ def optimize_cnf(maxterms, var_count, var_names):
 
 
 def construct_coverage_table(prime_set, terms, var_count, var_names, is_dnf=True):
+    """Строит таблицу покрытия"""
+    if not isinstance(prime_set, (list, set)):
+        raise TypeError("Prime set must be a list or set")
+    if not isinstance(terms, (list, set)):
+        raise TypeError("Terms must be a list or set")
+    if not isinstance(var_count, int) or var_count <= 0:
+        raise ValueError("Variable count must be a positive integer")
+    if not isinstance(var_names, list) or len(var_names) != var_count:
+        raise ValueError("Variable names must be a list matching variable count")
+
     return {
         imp: ["Х" if is_implicant_covering_term(imp, convert_number_to_bits(t, var_count)) else "."
               for t in terms]
@@ -97,6 +143,14 @@ def construct_coverage_table(prime_set, terms, var_count, var_names, is_dnf=True
 
 
 def display_coverage_table(table_data, terms, var_names, is_dnf=True):
+    """Отображает таблицу покрытия"""
+    if not isinstance(table_data, dict):
+        raise TypeError("Table data must be a dictionary")
+    if not isinstance(terms, (list, set)):
+        raise TypeError("Terms must be a list or set")
+    if not isinstance(var_names, list):
+        raise TypeError("Variable names must be a list")
+
     header = [convert_term_to_clause(t, var_names, not is_dnf).replace(" ", ".") for t in terms]
     print("\nТаблица покрытия:\n" + " " * 20 + " ".join(f"{cell:16}" for cell in header))
     print("-" * (20 + 17 * len(header)))
@@ -106,7 +160,16 @@ def display_coverage_table(table_data, terms, var_names, is_dnf=True):
         row = [cell if cell == "Х" else "." for cell in table_data[imp]]
         print(f"{label:20} | " + " ".join(f"{cell:16}" for cell in row))
 
+
 def convert_term_to_clause(index, var_names, for_cnf=True):
+    """Конвертирует терм в дизъюнкт/конъюнкт"""
+    if not isinstance(index, int) or index < 0:
+        raise ValueError("Index must be a non-negative integer")
+    if not isinstance(var_names, list):
+        raise TypeError("Variable names must be a list")
+    if len(var_names) == 0:
+        raise ValueError("Variable names list cannot be empty")
+
     bits = format(index, f'0{len(var_names)}b')
     literals = [
         ("¬" + v if bit == '1' else v) if for_cnf
@@ -115,7 +178,16 @@ def convert_term_to_clause(index, var_names, for_cnf=True):
     ]
     return f"({('∨' if for_cnf else '∧').join(literals)})"
 
+
 def tabular_method_processor(terms, var_count, var_names, is_dnf=True):
+    """Обрабатывает данные табличным методом"""
+    if not isinstance(terms, (list, set)):
+        raise TypeError("Terms must be a list or set")
+    if not isinstance(var_count, int) or var_count <= 0:
+        raise ValueError("Variable count must be a positive integer")
+    if not isinstance(var_names, list) or len(var_names) != var_count:
+        raise ValueError("Variable names must be a list matching variable count")
+
     prime_set = compute_prime_implicants(terms, var_count, var_names, is_dnf)
     coverage_table = construct_coverage_table(prime_set, terms, var_count, var_names, is_dnf)
     display_coverage_table(coverage_table, terms, var_names, is_dnf)

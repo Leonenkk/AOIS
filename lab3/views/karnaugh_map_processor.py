@@ -1,8 +1,23 @@
 def generate_gray_sequence(length: int) -> list:
+    """Генерирует последовательность кодов Грея заданной длины"""
+    if not isinstance(length, int) or length <= 0:
+        raise ValueError("Length must be a positive integer")
     return [num ^ (num >> 1) for num in range(1 << length)]
 
 
 def _convert_to_binary_terms(input_terms: list, variable_count: int) -> list:
+    """Конвертирует список терминов в бинарное представление"""
+    if not isinstance(input_terms, list):
+        raise TypeError("Input terms must be a list")
+    if not isinstance(variable_count, int) or variable_count <= 0:
+        raise ValueError("Variable count must be a positive integer")
+    if any(not isinstance(term, int) or term < 0 for term in input_terms):
+        raise ValueError("All terms must be non-negative integers")
+
+    max_term = max(input_terms, default=0)
+    if max_term >= (1 << variable_count):
+        raise ValueError(f"Term {max_term} exceeds maximum value for {variable_count} variables")
+
     return [tuple((term >> i) & 1 for i in reversed(range(variable_count))) for term in input_terms]
 
 
@@ -16,8 +31,18 @@ def _combine_terms_pair(term_a: tuple, term_b: tuple) -> tuple:
 
 
 def _identify_prime_implicants(binary_terms: list, var_count: int) -> set:
+    """Идентифицирует простые импликанты"""
+    if not isinstance(binary_terms, list):
+        raise TypeError("Binary terms must be a list")
+    if not binary_terms:
+        raise ValueError("Binary terms list cannot be empty")
+    if not isinstance(var_count, int) or var_count <= 0:
+        raise ValueError("Variable count must be a positive integer")
+
     grouped_terms = {}
     for term in binary_terms:
+        if not isinstance(term, tuple) or len(term) != var_count:
+            raise ValueError(f"Term {term} has invalid format or length")
         key = term.count(1)
         grouped_terms.setdefault(key, []).append(term)
 
@@ -43,16 +68,32 @@ def _identify_prime_implicants(binary_terms: list, var_count: int) -> set:
 
 
 def _is_implicant_covering(implicant: tuple, minterm: tuple) -> bool:
+    """Проверяет, покрывает ли импликант данный минтерм"""
+    if not isinstance(implicant, tuple) or not isinstance(minterm, tuple):
+        raise TypeError("Both arguments must be tuples")
+    if len(implicant) != len(minterm):
+        raise ValueError("Implicant and minterm must have equal length")
+
     return all(imp_bit == '-' or imp_bit == mt_bit for imp_bit, mt_bit in zip(implicant, minterm))
 
 
 def _select_essential_implicants(prime_set: set, minterms: list) -> set:
+    """Выбирает существенные импликанты"""
+    if not isinstance(prime_set, set):
+        raise TypeError("Prime set must be a set")
+    if not isinstance(minterms, list):
+        raise TypeError("Minterms must be a list")
+    if not minterms:
+        raise ValueError("Minterms list cannot be empty")
+
     coverage_table = {imp: [mt for mt in minterms if _is_implicant_covering(imp, mt)] for imp in prime_set}
     essential = set()
     covered = set()
 
     for mt in minterms:
         covering = [imp for imp in prime_set if _is_implicant_covering(imp, mt)]
+        if not covering:
+            raise ValueError(f"Minterm {mt} is not covered by any prime implicant")
         essential.add(covering[0]) if len(covering) == 1 else None
 
     for imp in essential:
@@ -68,6 +109,16 @@ def _select_essential_implicants(prime_set: set, minterms: list) -> set:
 
 
 def optimize_kmap(input_terms: list, var_count: int, var_names: list, use_conjunctive: bool = True) -> list:
+    """Оптимизирует карту Карно и возвращает упрощенное выражение"""
+    if not isinstance(input_terms, list):
+        raise TypeError("Input terms must be a list")
+    if not isinstance(var_count, int) or var_count <= 0:
+        raise ValueError("Variable count must be a positive integer")
+    if not isinstance(var_names, list) or len(var_names) != var_count:
+        raise ValueError("Variable names must be a list matching variable count")
+    if any(not isinstance(name, str) for name in var_names):
+        raise ValueError("All variable names must be strings")
+
     binary_terms = _convert_to_binary_terms(input_terms, var_count)
     primes = _identify_prime_implicants(binary_terms, var_count)
     essentials = _select_essential_implicants(primes, binary_terms)
@@ -89,6 +140,16 @@ def optimize_kmap(input_terms: list, var_count: int, var_names: list, use_conjun
 
 
 def display_kmap_table(terms: list, var_count: int, var_names: list, use_conjunctive: bool = True) -> None:
+    """Отображает карту Карно в табличном формате"""
+    if not isinstance(terms, list):
+        raise TypeError("Terms must be a list")
+    if not isinstance(var_count, int) or var_count <= 0:
+        raise ValueError("Variable count must be a positive integer")
+    if not isinstance(var_names, list) or len(var_names) != var_count:
+        raise ValueError("Variable names must be a list matching variable count")
+    if any(not isinstance(name, str) for name in var_names):
+        raise ValueError("All variable names must be strings")
+
     row_bits = var_count // 2
     col_bits = var_count - row_bits
     row_codes = generate_gray_sequence(row_bits)
@@ -105,6 +166,6 @@ def display_kmap_table(terms: list, var_count: int, var_names: list, use_conjunc
         for cc in col_codes:
             full_code = (rc << col_bits) | cc
             cell_value = '1' if (use_conjunctive and full_code in term_set) or (
-                        not use_conjunctive and full_code not in term_set) else '0'
+                    not use_conjunctive and full_code not in term_set) else '0'
             print(f" {cell_value} ", end="|")
         print()
